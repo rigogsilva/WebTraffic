@@ -13,5 +13,6 @@ The output file should be a CSV file with one row per user: User (user_id), leng
     pip3 install pandas
     python3 -m pip install pandas
     
+## Design:    
 ![Design](https://github.com/rigogsilva/WebTraffic/blob/master/Design/Wireframe.jpeg)
 
