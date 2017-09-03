@@ -8,63 +8,36 @@ from os import path
 import os
 from tkinter import *
 
-def main():
-    
-    def setPath():
-        #Get value from Entry and save to path.txt
-        url = theTextBox1.get()
-        f = open('path.txt', 'w')
-        if f.mode == 'w':
-            f.write(url)
-        f.close()
-        #Exit root and continue. 
-        root.destroy()
-
-    #----------------------------------------------------------------------
-    ### Allow use to change the path where the files reside.
-    #----------------------------------------------------------------------
+#----------------------------------------------------------------------
+### Create WebTrafficPerUser.py file function
+#----------------------------------------------------------------------
+def createFile():
     root = Tk()
     root.title('Web Traffic per User')
+    
+    def openExcel():
+        os.system("open -a 'Microsoft Excel.app' '%s'" % 'WebTrafficPerUser.csv')
+
+    variable = StringVar()
+    variableString = ''
 
     topFrame = Frame(root)
     topFrame.pack()
     bottonFrame = Frame(root)
     bottonFrame.pack(side=BOTTOM)
 
-    #Get default path and if not exists save to path.txt file. 
-    urlPathDefault = ''
-    if path.exists('path.txt'):
-        f = open('path.txt', 'r')
-        if f.mode == 'r':
-            urlPathDefault = f.read()
-        f.close()
-    else: 
-        f = open('path.txt', 'w+')
-        urlPathDefault = 'https://s3-us-west-2.amazonaws.com/cauldron-workshop/data/'
-        f.write(urlPathDefault)
-        f.close()
+    label1 = Label(text='Processing Infomarmation Log:', fg='#FF6400')
+    label1.pack()
+    label2=Label(bottonFrame,width=80, height=10, textvariable=variable)
+    label2.pack(side=BOTTOM)
 
-    theTextBox1 = Entry(bottonFrame, width=50)
-    theTextBox1.insert(END, urlPathDefault)
-    theTextBox1.pack()
-    theTextBox1.focus_set()
-
-    theLabel1 = Label(text='Enter the path for the Traffic User Data:', fg='#FF6400')
-    theLabel1.pack()
-
-    theButton1 = Button(bottonFrame, text='Submit', fg='#373431')
-    theButton1.pack()
-    url = ''
-    theButton1.config(command=setPath)
-
-    root.mainloop()
+    root.update()
 
     #----------------------------------------------------------------------
     ### Download all files (a.csv, ... , z.csv) to the all.csv locally. 
-    ### Do this using AWS S3 bucket. 
     #----------------------------------------------------------------------
 
-    # Measure time spent creating moving data from (a.csv, ... , z.csv) to the all.csv
+    # Measure time spent processind data
     startTime = datetime.now()
 
     #Set alphabet list from a through z and create the file names based on these values
@@ -91,7 +64,9 @@ def main():
     for fileName in fileNames:
         urlFile = url + fileName
         data = pd.DataFrame(pd.read_csv(urlFile))
-        print('Copying ' + str(len(data)) + ' rows from file ' + urlFile)
+        #Display into in screen. 
+        variable.set('Copying ' + str(len(data)) + ' rows from file ' + urlFile)
+        root.update()
         allFilesRow = allFilesRow + len(data)
         frames.append(data)
         result = pd.concat(frames)
@@ -101,17 +76,10 @@ def main():
 
     print('Rows for all the files: ' + str(allFilesRow))
 
-    #End measure time
-    endTime = datetime.now()
-    print('Time spent moving data into all.csv from (a.csv, ... , z.csv) files is ' + str(endTime - startTime))
-
     #----------------------------------------------------------------------
     ### Create a DB and add values from all.csv file to tWebTraffic table.  
     ### This will be used for data validation at the bottom of the program.
     #----------------------------------------------------------------------
-
-    # Measure time spent moving data to from all.csv to sqlite3 table. 
-    startTime = datetime.now()
 
     #Start database connect and store it in memory
     con = sqlite3.connect(':memory:')
@@ -135,19 +103,13 @@ def main():
             rowList = [(row['drop'],row['length'],row['path'],row['user_agent'],row['user_id'])]
             con.executemany('INSERT INTO tWebTraffic VALUES (?,?,?,?,?)', rowList)
 
-    #End measure time
-    endTime = datetime.now()
-    print('Time spent moving data into tWebTraffic from all.csv is ' + str(endTime - startTime) + ' for ' +  str(rowConter) + ' rows.')
-
     #----------------------------------------------------------------------
-    ### Get data from tWebTraffic and add it to WebTrafficPerUser.csv file
+    ### Sum the time for the user in each path. 
+    ### Create a data frame with the same values but horizontally. 
+    ### Add results to WebTrafficPerUser.csv file
     #----------------------------------------------------------------------
 
-    # Measure time spent creating WebTrafficPerUser file from sqlite3 table. 
-    startTime = datetime.now()
-
-
-    #Sume the length time per user and path and add to a data new data frame.
+    #Sum the length time per user and path and add to a data new data frame.
     groupBy = result.groupby(['user_id', 'path']).sum()
 
     #Add back index since the group by takes the index out. 
@@ -158,10 +120,6 @@ def main():
     with open('WebTrafficPerUser.csv', 'w+') as f:
         newf.to_csv(f, index=True, encoding='utf-8') 
     
-    #End measure time
-    endTime = datetime.now()
-    print('Time spent moving data into WebTrafficPerUser from tWebTraffic table is ' + str(endTime - startTime))
-
     #----------------------------------------------------------------------
     ### Validate data using sql and the panda dataframe 
     #----------------------------------------------------------------------
@@ -176,6 +134,9 @@ def main():
     #Print unique users from source file: 
     uniqueIDS = result['user_id'].unique()
     uniqueIDS = len(uniqueIDS)
+    
+    #Set variableString 
+    variableString = 'Unique users from all the files: ' + str(uniqueIDS) + '\n'
     print('Unique users from source file: ' + str(uniqueIDS))
 
     #Print unique users from database: 
@@ -189,18 +150,77 @@ def main():
     else: 
         print('Unique users match.')
 
-    #----------------------------------------------------------------------
-    ### Extra: Get data from tWebTraffic and add it to DistinctBrosers.csv file
-    #----------------------------------------------------------------------
+    #End measure time
+    endTime = datetime.now()
+    variableString = variableString + 'Time spent processing the data: ' + str(endTime - startTime) + '\n'
+    print('Time spent processing the data: ' + str(endTime - startTime))
 
-    #----------------------------------------------------------------------
-    ### Extra: Get data from tWebTraffic and add it to PagesUsersStayTheLongest.csv file
-    #----------------------------------------------------------------------
-
-    
+    #Add open buttons
+    variable.set(variableString)
+    button1 = Button(bottonFrame, text='Open File in Excel', fg='#373431')
+    button1.pack()
+    button1.config(command=openExcel)
+    label1.destroy()
+    root.update()
 
     root.mainloop()
 
+def main():    
+    #----------------------------------------------------------------------
+    ### Prompt for web traffic data path function
+    #----------------------------------------------------------------------
+    def pathPrompt():
+        root = Tk()
+        root.title('Web Traffic per User')
+
+        def setPath():
+            #Get value from Entry and save to path.txt
+            url = theTextBox1.get()
+            f = open('path.txt', 'w')
+            if f.mode == 'w':
+                f.write(url)
+            f.close()
+            #Exit root and continue. 
+            root.destroy()
+            createFile()
+
+        topFrame = Frame(root)
+        topFrame.pack()
+        bottonFrame = Frame(root)
+        bottonFrame.pack(side=BOTTOM)
+
+        #Get default path and if not exists save to path.txt file. 
+        urlPathDefault = ''
+        if path.exists('path.txt'):
+            f = open('path.txt', 'r')
+            if f.mode == 'r':
+                urlPathDefault = f.read()
+            f.close()
+        else: 
+            f = open('path.txt', 'w+')
+            urlPathDefault = 'https://s3-us-west-2.amazonaws.com/cauldron-workshop/data/'
+            f.write(urlPathDefault)
+            f.close()
+
+        theTextBox1 = Entry(bottonFrame, width=50)
+        theTextBox1.insert(END, urlPathDefault)
+        theTextBox1.pack()
+        theTextBox1.focus_set()
+
+        theLabel1 = Label(text='Enter the path for the Traffic User Data:', fg='#FF6400')
+        theLabel1.pack()
+
+        theLabel2 = Label(bottonFrame, fg='red')
+        theLabel2.pack()
+
+        theButton1 = Button(bottonFrame, text='Submit', fg='#373431')
+        theButton1.pack()
+        theButton1.config(command=setPath)
+        url = ''
+
+        root.mainloop()
+        
+    pathPrompt()
 
 if __name__ == "__main__":
     main()

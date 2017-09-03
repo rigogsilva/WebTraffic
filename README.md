@@ -14,6 +14,11 @@ The output file should be a CSV file with one row per user: User (user_id), leng
     Install Certificates.command: 
         Go to Applications/Python 3.6 and double-click Install Certificates.command
     Pandas: pip3 install pandas
+
+## Installation:
+1. Download or clone the program. 
+2. Open a terminal, navidate to the program root folder
+3. Run the following command on terminal: python3 WebTrafficPerUser.py
     
 ## Design:    
 ![Design](https://github.com/rigogsilva/WebTraffic/blob/master/Design/Wireframe.jpeg)
