@@ -10,8 +10,10 @@ The output file should be a CSV file with one row per user: User (user_id), leng
 3. The program should be stored in a public GitHub account with documentation on how to install and run it.
 
 ## Dependencies: 
-    pip3 install pandas
-    python3 -m pip install pandas
+    sqlite3: It should come with python3, but I had to install.
+    Install Certificates.command: 
+        Go to Applications/Python 3.6 and double-click Install Certificates.command
+    Pandas: pip3 install pandas
     
 ## Design:    
 ![Design](https://github.com/rigogsilva/WebTraffic/blob/master/Design/Wireframe.jpeg)
