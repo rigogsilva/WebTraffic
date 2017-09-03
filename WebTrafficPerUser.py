@@ -68,7 +68,7 @@ def main():
     startTime = datetime.now()
 
     #Set alphabet list from a through z and create the file names based on these values
-    alphabet = ['a']#list(string.ascii_lowercase)
+    alphabet = list(string.ascii_lowercase)
     fileNames = []
     for eachLetter in alphabet:
         fileNames = fileNames + [(str(eachLetter) + '.csv')]
@@ -87,12 +87,15 @@ def main():
 
     #Loop through each file name and copy the data to all.csv file. Count the ammount of rowns copied.
     allFilesRow = 0
+    frames = []
     for fileName in fileNames:
         urlFile = url + fileName
         data = pd.DataFrame(pd.read_csv(urlFile))
         print('Copying ' + str(len(data)) + ' rows from file ' + urlFile)
         allFilesRow = allFilesRow + len(data)
-
+        frames.append(data)
+        result = pd.concat(frames)
+        
         with open('all.csv', 'a+') as f:
             data.to_csv(f, index=False, encoding='utf-8')
 
@@ -104,7 +107,7 @@ def main():
 
     #----------------------------------------------------------------------
     ### Create a DB and add values from all.csv file to tWebTraffic table.  
-    ### Use the database to group the data based on employee and path
+    ### This will be used for data validation at the bottom of the program.
     #----------------------------------------------------------------------
 
     # Measure time spent moving data to from all.csv to sqlite3 table. 
@@ -143,50 +146,48 @@ def main():
     # Measure time spent creating WebTrafficPerUser file from sqlite3 table. 
     startTime = datetime.now()
 
-    #Select the date grouped by user and path. And also return the sum of the length per user and path. 
-    cursor = con.execute("SELECT user_id, path, sum(length) FROM tWebTraffic WHERE user_id <> 'user_id' GROUP BY user_id, path ORDER BY user_id, SUM(length) DESC")
-    rows = cursor.fetchall();
 
-    #Get unique user id
-    dupUsers = []
-    for uniqueID in rows:
-        dupUsers.append(str(uniqueID[0]))
+    #Sume the length time per user and path and add to a data new data frame.
+    groupBy = result.groupby(['user_id', 'path']).sum()
 
-    #Get all unique users
-    uniqueIDS = set(dupUsers)
+    #Add back index since the group by takes the index out. 
+    groupByIndex = groupBy.add_suffix('_sum').reset_index()
 
-    #Concatenate path and length per user.
-    usersWithPath = []
-    for eachUser in uniqueIDS:
-        pathLenghPerUser = ''
-        for eachPath in rows:
-            #Append path and lengh if user matches
-            if str(eachUser) == str(eachPath[0]):
-                pathLenghPerUser = str(pathLenghPerUser) + (' Page: ' + str(eachPath[1]) + '  time spent (sec): ' + str(eachPath[2]) + ' | ')
-        usersWithPath.append([eachUser, pathLenghPerUser])
-        
-    #Write data to WebTrafficPerUser file
-    wtpu = csv.writer(open("WebTrafficPerUser2.csv", "w+"))
-    #Add header
-    header = [('User ID', 'Page in Website and Time Spent (sec)')]
-    wtpu.writerows(header)
-    #Add all rows from wtpu into WebTrafficPerUser.csv file.
-    #wtpu.writerows(rows)
-    wtpu.writerows(usersWithPath)
-
+    #Set transfor groupByIndex into a pivot data frame. This returns values horizontally. 
+    newf = groupByIndex.pivot(index='user_id', columns='path', values='length_sum').fillna(0)
+    with open('WebTrafficPerUser.csv', 'w+') as f:
+        newf.to_csv(f, index=True, encoding='utf-8') 
+    
     #End measure time
     endTime = datetime.now()
     print('Time spent moving data into WebTrafficPerUser from tWebTraffic table is ' + str(endTime - startTime))
 
     #----------------------------------------------------------------------
-    ### Validate data
+    ### Validate data using sql and the panda dataframe 
     #----------------------------------------------------------------------
 
     #Validate unique users
     uniqueUsers = con.execute("SELECT count(distinct user_id) FROM tWebTraffic WHERE user_id <> 'user_id'")
+    
+    #Select the date grouped by user and path. And also return the sum of the length per user and path. 
+    #cursor = con.execute("SELECT user_id, path, sum(length) FROM tWebTraffic WHERE user_id <> 'user_id' GROUP BY user_id, path ORDER BY user_id, SUM(length) DESC")
+    #rows = cursor.fetchall();
+    
+    #Print unique users from source file: 
+    uniqueIDS = result['user_id'].unique()
+    uniqueIDS = len(uniqueIDS)
+    print('Unique users from source file: ' + str(uniqueIDS))
 
+    #Print unique users from database: 
+    uniqueUsersDB = 0
     for i in uniqueUsers:
-        print(i)
+        uniqueUsersDB = i[0]
+        print('Unique users from database: ' + str(uniqueUsersDB))
+
+    if uniqueUsersDB != uniqueIDS:
+        print('Unique users don''t match')
+    else: 
+        print('Unique users match.')
 
     #----------------------------------------------------------------------
     ### Extra: Get data from tWebTraffic and add it to DistinctBrosers.csv file
@@ -196,30 +197,7 @@ def main():
     ### Extra: Get data from tWebTraffic and add it to PagesUsersStayTheLongest.csv file
     #----------------------------------------------------------------------
 
-    #Close database connection
-    con.commit()
-    con.close()
-
-    root = Tk()
-    root.title('Web Traffic per User')
-
-    topFrame = Frame(root)
-    topFrame.pack()
-
-    bottonFrame = Frame(root)
-    bottonFrame.pack(side=BOTTOM)
-
-    theTextBox1 = Entry(bottonFrame, width=40)
-    theTextBox1.pack()
-    theTextBox1.focus_set()
-
-    theLabel1 = Label(text='Enter the path for the Traffic User Data:', fg='#FF6400')
-    theLabel1.pack()
-
-    theButton1 = Button(bottonFrame, text='Submit', fg='#373431')
-    theButton1.pack()
-    url = ''
-    theButton1.config(command=setPath)
+    
 
     root.mainloop()
 
