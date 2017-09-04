@@ -12,6 +12,8 @@ from tkinter import *
 ### Create WebTrafficPerUser.py file function
 #----------------------------------------------------------------------
 def createFile():
+    
+    #Screen for information log. 
     root = Tk()
     root.title('Web Traffic per User')
     
@@ -25,12 +27,19 @@ def createFile():
     topFrame.pack()
     bottonFrame = Frame(root)
     bottonFrame.pack(side=BOTTOM)
-
     label1 = Label(text='Processing Infomarmation Log:', fg='#FF6400')
     label1.pack()
     label2=Label(bottonFrame,width=80, height=10, textvariable=variable)
     label2.pack(side=BOTTOM)
 
+    #Set screen to the middle of the screen. 
+    h = 200
+    w = 700
+    ws = root.winfo_screenmmwidth()
+    hs = root.winfo_screenheight()
+    x = (ws/2) + (w/4)
+    y = (hs/2) - (h/2)
+    root.geometry('%dx%d+%d+%d' % (w,h,x,y))
     root.update()
 
     #----------------------------------------------------------------------
@@ -126,11 +135,7 @@ def createFile():
 
     #Validate unique users
     uniqueUsers = con.execute("SELECT count(distinct user_id) FROM tWebTraffic WHERE user_id <> 'user_id'")
-    
-    #Select the date grouped by user and path. And also return the sum of the length per user and path. 
-    #cursor = con.execute("SELECT user_id, path, sum(length) FROM tWebTraffic WHERE user_id <> 'user_id' GROUP BY user_id, path ORDER BY user_id, SUM(length) DESC")
-    #rows = cursor.fetchall();
-    
+        
     #Print unique users from source file: 
     uniqueIDS = result['user_id'].unique()
     uniqueIDS = len(uniqueIDS)
@@ -217,6 +222,15 @@ def main():
         theButton1.pack()
         theButton1.config(command=setPath)
         url = ''
+
+        #Set the appliction to the middle of the screen. 
+        h = 150
+        w = 700
+        ws = root.winfo_screenmmwidth()
+        hs = root.winfo_screenheight()
+        x = (ws/2) + (w/4)
+        y = (hs/2) - (h/2)
+        root.geometry('%dx%d+%d+%d' % (w,h,x,y))
 
         root.mainloop()
         
